@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <title>3Dビューア</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-</head>
-<body style="margin:0; padding:0;">
-  <model-viewer
-    src="Sojijimon.glb"
-    camera-controls
-    auto-rotate
-    style="width: 100vw; height: 100vh;"
-  >
-  </model-viewer>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  </head>
+  <body style="margin:0; padding:0;">
+    <model-viewer
+      src="Sojijimon.glb"
+      ar
+      ar-modes="scene-viewer quick-look webxr"
+      camera-controls
+      auto-rotate
+      style="width: 100vw; height: 100vh;"
+    >
+    </model-viewer>
+  </body>
 </html>
