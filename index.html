@@ -2,16 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>ARビューア</title>
-  <!-- model-viewer ライブラリ -->
+  <title>3Dビューア</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body style="margin:0; padding:0;">
-
-  <!-- model-viewer本体 -->
   <model-viewer
     src="Sojijimon.glb"
-    ios-src="3dpea.com_ai_anime.usdz"  <!-- iOS用（なければ削除してOK） -->
+    ios-src="3dpea.com_ai_anime.usdz"
     ar
     ar-modes="scene-viewer quick-look webxr"
     camera-controls
@@ -19,6 +16,5 @@
     style="width: 100vw; height: 100vh;"
   >
   </model-viewer>
-
 </body>
 </html>
