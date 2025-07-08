@@ -3,8 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+      }
+      #audio-controls {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 10px;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+      }
+      #play-btn {
+        font-size: 16px;
+        padding: 6px 12px;
+      }
+      #seek-bar {
+        width: 60%;
+      }
+    </style>
   </head>
-  <body style="margin:0; padding:0;">
+  <body>
+    <!-- 3Dモデル -->
     <model-viewer
       src="stone01.glb"
       ar
@@ -14,5 +40,43 @@
       style="width: 100vw; height: 100vh;"
     >
     </model-viewer>
+
+    <!-- 音声 -->
+    <audio id="narration" src="Kanagaso-ishi Tuff_ Lithofacies and Depositional Settings.wav"></audio>
+
+    <!-- オーディオ操作UI -->
+    <div id="audio-controls">
+      <button id="play-btn">▶ 再生</button>
+      <input type="range" id="seek-bar" value="0" min="0" max="100" />
+    </div>
+
+    <script>
+      const audio = document.getElementById('narration');
+      const playBtn = document.getElementById('play-btn');
+      const seekBar = document.getElementById('seek-bar');
+
+      // 再生/一時停止
+      playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+          audio.play();
+          playBtn.textContent = '⏸ 停止';
+        } else {
+          audio.pause();
+          playBtn.textContent = '▶ 再生';
+        }
+      });
+
+      // シークバー更新
+      audio.addEventListener('timeupdate', () => {
+        const progress = (audio.currentTime / audio.duration) * 100;
+        seekBar.value = progress || 0;
+      });
+
+      // スライダーからシーク
+      seekBar.addEventListener('input', () => {
+        const seekTo = (seekBar.value / 100) * audio.duration;
+        audio.currentTime = seekTo;
+      });
+    </script>
   </body>
 </html>
