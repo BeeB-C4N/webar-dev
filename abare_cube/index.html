@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        height: 100%;
+        background-color: #fff;
+      }
+
+      model-viewer {
+        display: block;
+        width: 100%;
+        height: calc(100vh - 100px); /* 再生バーの高さを引く */
+      }
+
+      #audio-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.96);
+        padding: 8px 0;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #audio-container h2 {
+        margin: 4px 0;
+        font-size: 14px;
+        color: #333;
+      }
+
+      #narration {
+        width: 90%;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- 3Dモデル -->
+    <model-viewer
+      src="../cube_abare_yoneda.glb"
+      camera-controls
+      auto-rotate
+    ></model-viewer>
+
+    <!-- オーディオガイド -->
+    <div id="audio-container">
+      <h2>解説ガイド</h2>
+      <audio
+        id="narration"
+        controls
+        src="../abare_yoneda.wav"
+      ></audio>
+    </div>
+  </body>
+</html>
