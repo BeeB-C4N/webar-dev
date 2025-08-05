@@ -70,7 +70,7 @@
     ar-modes="scene-viewer webxr quick-look"
     ar-placement="floor"
     ar-scale="fixed"
-    scale="0.5 0.7 0.5"
+    scale="0.3 0.3 0.3"
     auto-rotate
     camera-controls
     alt="AsianBlackBear"
@@ -78,11 +78,15 @@
   </model-viewer>
 
     <!-- オーディオガイド + ARボタン -->
-    <div id="audio-container">
-      <h3>解説ガイド</h3>
-      <audio id="narration" controls src="../Mitsuke.wav"></audio>
-      <button id="custom-ar-button">AR</button>
-    </div>
+<div id="audio-container">
+  <div class="guide-row">
+    <h2>解説ガイド</h2>
+    <audio id="narration" controls src="../Mitsuke.wav"></audio>
+  </div>
+  <div class="ar-button-row">
+    <button id="custom-ar-button">ARで大きさを確認</button>
+  </div>
+</div>
 
     <script>
       const viewer = document.getElementById('viewer');
