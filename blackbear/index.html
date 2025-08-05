@@ -15,7 +15,7 @@
     model-viewer {
       display: block;
       width: 100%;
-      height: calc(100vh - 120px); /* オーディオガイド分を引く */
+      height: calc(100vh - 120px); /* 音声ガイド領域を引いた高さ */
     }
 
     #audio-container {
@@ -26,14 +26,18 @@
       background-color: rgba(255, 255, 255, 0.96);
       box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
       z-index: 10;
-      padding: 10px 16px;
+      padding: 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
     }
 
     .audio-header {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      margin-bottom: 4px;
+      gap: 16px;
     }
 
     .audio-header h2 {
@@ -54,7 +58,7 @@
     }
 
     #narration {
-      width: 100%;
+      width: 90%;
       max-width: 600px;
     }
   </style>
@@ -65,7 +69,7 @@
 <model-viewer
   id="viewer"
   src="./blackbear_yihsuanchen13.glb"
-  ios-src="./blackbear_yihsuanchen13_70.usdz"
+  ios-src="./blackbear_yihsuanchen13.usdz"
   ar
   ar-modes="scene-viewer webxr quick-look"
   ar-placement="floor"
