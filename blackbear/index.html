@@ -1,119 +1,87 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>熊モデル ARガイド</title>
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        font-family: sans-serif;
-        background-color: #fff;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: #fff;
+    }
 
-      model-viewer {
-        display: block;
-        width: 100%;
-        height: calc(100vh - 130px); /* 下部のガイド分を差し引く */
-      }
+    model-viewer {
+      display: block;
+      width: 100%;
+      height: calc(100vh - 120px); /* オーディオガイド分を引く */
+    }
 
-      #audio-container {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-        z-index: 10;
-        padding: 12px 16px;
-      }
+    #audio-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+      padding: 10px 16px;
+    }
 
-      .audio-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-      }
+    .audio-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
 
-      .audio-header h2 {
-        margin: 0;
-        font-size: 16px;
-        color: #333;
-      }
+    .audio-header h2 {
+      margin: 0;
+      font-size: 14px;
+      color: #333;
+    }
 
-      #custom-ar-button {
-        background-color: #2c3e50;
-        color: #fff;
-        padding: 6px 12px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        cursor: pointer;
-        margin-top: 6px;
-      }
+    .ar-link {
+      font-size: 14px;
+      color: #2c3e50;
+      text-decoration: underline;
+      cursor: pointer;
+    }
 
-      #custom-ar-button:hover {
-        background-color: #1a252f;
-      }
+    .ar-link:hover {
+      color: #1a252f;
+    }
 
-      #narration {
-        width: 100%;
-        max-width: 600px;
-        margin-top: 10px;
-      }
+    #narration {
+      width: 100%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
 
-      @media (max-width: 600px) {
-        .audio-header {
-          flex-direction: column;
-          align-items: flex-start;
-        }
+<!-- モデルビューア -->
+<model-viewer
+  id="viewer"
+  src="./blackbear_yihsuanchen13.glb"
+  ios-src="./blackbear_yihsuanchen13_70.usdz"
+  ar
+  ar-modes="scene-viewer webxr quick-look"
+  ar-placement="floor"
+  auto-rotate
+  camera-controls
+  alt="AsianBlackBear">
+</model-viewer>
 
-        #custom-ar-button {
-          align-self: flex-end;
-          margin-top: 8px;
-        }
-      }
-    </style>
-  </head>
+<!-- オーディオガイド -->
+<div id="audio-container">
+  <div class="audio-header">
+    <h2>解説ガイド</h2>
+    <span class="ar-link" onclick="document.getElementById('viewer').activateAR()">ARで表示</span>
+  </div>
+  <audio id="narration" controls src="../Mitsuke.wav"></audio>
+</div>
 
-  <body>
-    <!-- 3Dモデル表示 -->
-    <model-viewer
-      id="viewer"
-      src="./blackbear_yihsuanchen13.glb"
-      ios-src="./blackbear_yihsuanchen13_70.usdz"
-      ar
-      ar-modes="scene-viewer webxr quick-look"
-      ar-placement="floor"
-      ar-scale="dynamic"  <!-- ユーザーがAR内で指で縮小可能に -->
-      auto-rotate
-      camera-controls
-      alt="AsianBlackBear">
-    </model-viewer>
-
-    <!-- 音声ガイド & ARボタン -->
-    <div id="audio-container">
-      <div class="audio-header">
-        <h2>解説ガイド</h2>
-        <button id="custom-ar-button">ARで大きさ確認</button>
-      </div>
-      <audio
-        id="narration"
-        controls
-        src="../Mitsuke.wav"
-      ></audio>
-    </div>
-
-    <!-- ARボタン機能 -->
-    <script>
-      const viewer = document.getElementById('viewer');
-      const arButton = document.getElementById('custom-ar-button');
-
-      arButton.addEventListener('click', () => {
-        viewer.activateAR();
-      });
-    </script>
-  </body>
+</body>
 </html>
