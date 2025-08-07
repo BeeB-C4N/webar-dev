@@ -1,1 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: #fff;
+    }
 
+    model-viewer {
+      display: block;
+      width: 100%;
+      height: calc(100vh - 120px); /* 音声ガイド領域を引いた高さ */
+    }
+
+    #audio-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+      padding: 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .audio-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .audio-header h2 {
+      margin: 0;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .ar-link {
+      font-size: 14px;
+      color: #2c3e50;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .ar-link:hover {
+      color: #1a252f;
+    }
+
+    #narration {
+      width: 90%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- モデルビューア -->
+<model-viewer
+  id="viewer"
+  src="./dino_logo.glb"
+  ios-src="./dino_logo.usdz"
+  ar
+  ar-modes="scene-viewer webxr quick-look"
+  ar-placement="floor"
+  auto-rotate
+  camera-controls
+  alt="AsianBlackBear">
+</model-viewer>
+
+<!-- オーディオガイド -->
+<div id="audio-container">
+  <div class="audio-header">
+    <h2>解説ガイド</h2>
+    <span class="ar-link" onclick="document.getElementById('viewer').activateAR()">ARで表示</span>
+  </div>
+  <audio id="narration" controls src="./kuwajimakaseki.wav"></audio>
+</div>
+
+</body>
+</html>
