@@ -5,82 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      background-color: #fff;
-    }
-    model-viewer {
-      display: block;
-      width: 100%;
-      height: calc(100vh - 120px);
-    }
+    html, body { margin:0; padding:0; font-family:sans-serif; background:#fff; }
+    model-viewer { display:block; width:100%; height:calc(100vh - 120px); }
+
     #audio-container {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: rgba(255, 255, 255, 0.96);
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-      z-index: 10;
-      padding: 10px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
+      position:fixed; bottom:0; left:0; width:100%;
+      background:rgba(255,255,255,.96); box-shadow:0 -2px 8px rgba(0,0,0,.1);
+      z-index:10; padding:10px 0; display:flex; flex-direction:column; align-items:center; gap:6px;
     }
-    .audio-header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-    }
-    .audio-header h2 {
-      margin: 0;
-      font-size: 14px;
-      color: #333;
-    }
-    .ar-link {
-      font-size: 14px;
-      color: #2c3e50;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    .ar-link:hover {
-      color: #1a252f;
-    }
-    #narration {
-      width: 90%;
-      max-width: 600px;
-    }
+    .audio-header { display:flex; justify-content:center; align-items:center; gap:16px; }
+    .audio-header h2 { margin:0; font-size:14px; color:#333; }
+    .ar-link { font-size:14px; color:#2c3e50; text-decoration:underline; cursor:pointer; }
+    .ar-link:hover { color:#1a252f; }
+    #narration { width:90%; max-width:600px; }
 
     /* モーダル */
     #ar-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
+      position:fixed; inset:0; display:none; z-index:9999;
+      background:rgba(0,0,0,.45); align-items:center; justify-content:center;
     }
     #ar-modal .box {
-      min-width: 240px;
-      max-width: 80vw;
-      background: #fff;
-      color: #333;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.2);
-      padding: 20px 24px;
-      text-align: center;
-      font-size: 16px;
-      line-height: 1.6;
+      min-width:240px; max-width:80vw; background:#fff; color:#333;
+      border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.2);
+      padding:20px 24px; text-align:center; font-size:16px; line-height:1.6;
+    }
+    #ar-modal .close {
+      margin-top:10px; font-size:13px; color:#2c3e50; text-decoration:underline; cursor:pointer;
     }
   </style>
 </head>
 <body>
 
+  <!-- モデルビューア（元のまま） -->
   <model-viewer
     id="viewer"
     src="./dino_move.glb"
@@ -93,9 +49,12 @@
     alt="AsianBlackBear">
   </model-viewer>
 
-  <!-- モーダル -->
+  <!-- AR起動中モーダル -->
   <div id="ar-modal" role="dialog" aria-modal="true" aria-label="AR表示中">
-    <div class="box">ARを表示中...</div>
+    <div class="box">
+      ARを表示中...
+      <div class="close" id="ar-close">閉じる</div>
+    </div>
   </div>
 
   <!-- オーディオガイド -->
@@ -108,23 +67,61 @@
   </div>
 
   <script>
+    // ====== ここで秒数を指定 ======
+    // 例) 7秒: 7000 / 30秒: 30000 / 出しっぱなし: null
+    const AUTO_HIDE_MS = null; // ← 出しっぱなし（AR開始or遷移で閉じる）
+
+    const viewer = document.getElementById('viewer');
+    const modal = document.getElementById('ar-modal');
+    const closeBtn = document.getElementById('ar-close');
+    let autoTimer = null;
+
     function showARModal() {
-      const modal = document.getElementById('ar-modal');
       modal.style.display = 'flex';
-      setTimeout(() => {
-        modal.style.display = 'none';
-      }, 7000);
+      if (AUTO_HIDE_MS != null) {
+        clearTimeout(autoTimer);
+        autoTimer = setTimeout(hideARModal, AUTO_HIDE_MS);
+      }
     }
+    function hideARModal() {
+      clearTimeout(autoTimer);
+      autoTimer = null;
+      modal.style.display = 'none';
+    }
+
+    // ARの状態変化（WebXRなどで有効）：開始を検知して閉じる
+    viewer.addEventListener('ar-status', (e) => {
+      const s = e.detail.status; // 'session-started' | 'not-presenting' | 'failed' など
+      if (s === 'session-started' || s === 'failed') {
+        hideARModal();
+      }
+    });
+
+    // Scene Viewer / Quick Look など外部ARへ遷移する場合：
+    // ページが非表示になった瞬間にモーダルを閉じる
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') hideARModal();
+    });
+
+    // Quick Look起動ボタンがタップされた瞬間（iOS向け）
+    viewer.addEventListener('quick-look-button-tapped', hideARModal);
+
+    // 手動クローズ
+    closeBtn.addEventListener('click', hideARModal);
 
     async function openAR() {
       showARModal();
-      const viewer = document.getElementById('viewer');
       try {
         await viewer.activateAR();
       } catch (e) {
         console.warn('AR起動に失敗:', e);
+        // 失敗時はモーダルを残す or 消す、どちらにするか運用次第。
+        // 今回は邪魔にならないように閉じます。
+        hideARModal();
       }
     }
+    // グローバルに出す
+    window.openAR = openAR;
   </script>
 </body>
 </html>
