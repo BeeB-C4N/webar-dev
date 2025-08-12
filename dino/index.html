@@ -5,38 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    html, body { margin:0; padding:0; font-family:sans-serif; background:#fff; }
-    model-viewer { display:block; width:100%; height:calc(100vh - 120px); }
-
-    #audio-container {
-      position:fixed; bottom:0; left:0; width:100%;
-      background:rgba(255,255,255,.96); box-shadow:0 -2px 8px rgba(0,0,0,.1);
-      z-index:10; padding:10px 0; display:flex; flex-direction:column; align-items:center; gap:6px;
+    html, body {
+      margin: 0; padding: 0;
+      font-family: sans-serif; background-color: #fff;
     }
-    .audio-header { display:flex; justify-content:center; align-items:center; gap:16px; }
-    .audio-header h2 { margin:0; font-size:14px; color:#333; }
-    .ar-link { font-size:14px; color:#2c3e50; text-decoration:underline; cursor:pointer; }
-    .ar-link:hover { color:#1a252f; }
-    #narration { width:90%; max-width:600px; }
+    model-viewer {
+      display: block; width: 100%;
+      height: calc(100vh - 120px); /* 音声ガイド領域を引いた高さ */
+      background: #f7f7f7;
+    }
+    #audio-container {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background-color: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 10; padding: 10px 0;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .audio-header { display: flex; justify-content: center; align-items: center; gap: 16px; }
+    .audio-header h2 { margin: 0; font-size: 14px; color: #333; }
+    .ar-link { font-size: 14px; color: #2c3e50; text-decoration: underline; cursor: pointer; }
+    .ar-link:hover { color: #1a252f; }
+    #narration { width: 90%; max-width: 600px; }
 
-    /* モーダル */
+    /* ---- AR起動中モーダル ---- */
     #ar-modal {
-      position:fixed; inset:0; display:none; z-index:9999;
-      background:rgba(0,0,0,.45); align-items:center; justify-content:center;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none; align-items: center; justify-content: center;
+      z-index: 9999;
     }
     #ar-modal .box {
-      min-width:240px; max-width:80vw; background:#fff; color:#333;
-      border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.2);
-      padding:20px 24px; text-align:center; font-size:16px; line-height:1.6;
+      min-width: 260px; max-width: 86vw;
+      background: #fff; color: #333;
+      border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      padding: 20px 22px; text-align: center; line-height: 1.6;
     }
-    #ar-modal .close {
-      margin-top:10px; font-size:13px; color:#2c3e50; text-decoration:underline; cursor:pointer;
+    #ar-modal .title { font-size: 16px; font-weight: 600; }
+    #ar-modal .desc  { font-size: 12px; color: #666; margin-top: 4px; }
+
+    /* プログレスバー */
+    #progress-container {
+      width: 100%; height: 8px; background: #e6e6e6;
+      border-radius: 999px; margin-top: 14px; overflow: hidden;
+      position: relative;
+    }
+    #progress-bar {
+      width: 0%; height: 100%; background: #2c3e50;
+      transition: width .2s ease;
+    }
+    /* 進捗不明時のインジケータ */
+    .indeterminate #progress-bar {
+      width: 35%; animation: indet 1.2s ease-in-out infinite;
+    }
+    @keyframes indet {
+      0%   { transform: translateX(-100%); }
+      50%  { transform: translateX(20%); }
+      100% { transform: translateX(200%); }
+    }
+    #progress-text { margin-top: 8px; font-size: 12px; color: #555; }
+    #ar-modal .actions { margin-top: 10px; }
+    #ar-close {
+      font-size: 13px; color: #2c3e50; text-decoration: underline; cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <!-- モデルビューア（元のまま） -->
+  <!-- モデルビューア（元の構成） -->
   <model-viewer
     id="viewer"
     src="./dino_move.glb"
@@ -49,11 +85,16 @@
     alt="AsianBlackBear">
   </model-viewer>
 
-  <!-- AR起動中モーダル -->
+  <!-- AR起動中モーダル（読み込みバー付き） -->
   <div id="ar-modal" role="dialog" aria-modal="true" aria-label="AR表示中">
     <div class="box">
-      ARを表示中...
-      <div class="close" id="ar-close">閉じる</div>
+      <div class="title">ARを表示中...</div>
+      <div class="desc">データを読み込んでいます</div>
+      <div id="progress-container" class="indeterminate">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="progress-text"></div>
+      <div class="actions"><span id="ar-close">閉じる</span></div>
     </div>
   </div>
 
@@ -67,17 +108,24 @@
   </div>
 
   <script>
-    // ====== ここで秒数を指定 ======
-    // 例) 7秒: 7000 / 30秒: 30000 / 出しっぱなし: null
-    const AUTO_HIDE_MS = null; // ← 出しっぱなし（AR開始or遷移で閉じる）
+    // ====== 自動クローズ設定（不要なら null のまま）======
+    // 例: 30秒で自動クローズ -> 30000 / 出しっぱなし -> null
+    const AUTO_HIDE_MS = null;
 
     const viewer = document.getElementById('viewer');
-    const modal = document.getElementById('ar-modal');
+    const modal  = document.getElementById('ar-modal');
+    const progressWrap = document.getElementById('progress-container');
+    const progressBar  = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
     const closeBtn = document.getElementById('ar-close');
     let autoTimer = null;
 
     function showARModal() {
       modal.style.display = 'flex';
+      // 進捗表示初期化
+      progressWrap.classList.add('indeterminate');
+      progressBar.style.width = '0%';
+      progressText.textContent = '';
       if (AUTO_HIDE_MS != null) {
         clearTimeout(autoTimer);
         autoTimer = setTimeout(hideARModal, AUTO_HIDE_MS);
@@ -89,38 +137,56 @@
       modal.style.display = 'none';
     }
 
-    // ARの状態変化（WebXRなどで有効）：開始を検知して閉じる
-    viewer.addEventListener('ar-status', (e) => {
-      const s = e.detail.status; // 'session-started' | 'not-presenting' | 'failed' など
-      if (s === 'session-started' || s === 'failed') {
-        hideARModal();
+    // GLB/GLTFの読み込み進捗
+    viewer.addEventListener('progress', (event) => {
+      const { total, loaded } = event.detail || {};
+      if (typeof total === 'number' && total > 0) {
+        // 確定進捗
+        progressWrap.classList.remove('indeterminate');
+        let percent = Math.min(100, Math.max(0, Math.round((loaded / total) * 100)));
+        progressBar.style.width = percent + '%';
+        progressText.textContent = percent + '%';
+        if (percent >= 100) {
+          // 少し待ってからバーをリセット（見栄え用）
+          setTimeout(() => {
+            progressBar.style.width = '100%';
+          }, 100);
+        }
+      } else {
+        // 進捗不明（USDZなど）→ インジケータのみ
+        progressWrap.classList.add('indeterminate');
+        progressText.textContent = '';
       }
     });
 
-    // Scene Viewer / Quick Look など外部ARへ遷移する場合：
-    // ページが非表示になった瞬間にモーダルを閉じる
+    // WebXR（対応端末）: ARセッション開始/失敗を検知
+    viewer.addEventListener('ar-status', (e) => {
+      const s = e.detail?.status; // 'session-started' | 'not-presenting' | 'failed' など
+      if (s === 'session-started' || s === 'failed') hideARModal();
+    });
+
+    // iOS Quick Look: ボタンタップ契機を検知
+    viewer.addEventListener('quick-look-button-tapped', hideARModal);
+
+    // Scene Viewer / Quick Look 遷移時: ページが非表示になったら閉じる
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') hideARModal();
     });
 
-    // Quick Look起動ボタンがタップされた瞬間（iOS向け）
-    viewer.addEventListener('quick-look-button-tapped', hideARModal);
-
     // 手動クローズ
     closeBtn.addEventListener('click', hideARModal);
 
+    // AR起動
     async function openAR() {
       showARModal();
       try {
         await viewer.activateAR();
       } catch (e) {
         console.warn('AR起動に失敗:', e);
-        // 失敗時はモーダルを残す or 消す、どちらにするか運用次第。
-        // 今回は邪魔にならないように閉じます。
+        // 失敗時は邪魔にならないよう閉じる（必要に応じて残してもOK）
         hideARModal();
       }
     }
-    // グローバルに出す
     window.openAR = openAR;
   </script>
 </body>
