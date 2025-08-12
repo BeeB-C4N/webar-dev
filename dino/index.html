@@ -2,90 +2,161 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- model-viewer 本体 -->
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <!-- モデルのネットワーク先読み（同一URLを使うこと） -->
+  <link rel="preload" href="./dino_move.glb" as="fetch" crossorigin>
+  <link rel="preload" href="./dino_move4.usdz" as="fetch" crossorigin>
+
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
+      margin: 0; padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
       background-color: #fff;
     }
-
     model-viewer {
       display: block;
       width: 100%;
       height: calc(100vh - 120px); /* 音声ガイド領域を引いた高さ */
+      background: #f7f7f7;
     }
-
     #audio-container {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
+      position: fixed; bottom: 0; left: 0; width: 100%;
       background-color: rgba(255, 255, 255, 0.96);
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-      z-index: 10;
-      padding: 10px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,.1);
+      z-index: 10; padding: 10px 0;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     }
-
-    .audio-header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
+    .audio-header { display: flex; justify-content: center; align-items: center; gap: 16px; }
+    .audio-header h2 { margin: 0; font-size: 14px; color: #333; }
+    .ar-link { font-size: 14px; color: #2c3e50; text-decoration: underline; cursor: pointer; }
+    .ar-link:hover { color: #1a252f; }
+    #narration { width: 90%; max-width: 600px; }
+    /* 画面外プレローダー（表示しない） */
+    #preloader {
+      position: absolute; left: -99999px; top: -99999px;
+      width: 1px; height: 1px; opacity: 0; pointer-events: none;
     }
-
-    .audio-header h2 {
-      margin: 0;
-      font-size: 14px;
-      color: #333;
-    }
-
-    .ar-link {
-      font-size: 14px;
-      color: #2c3e50;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    .ar-link:hover {
-      color: #1a252f;
-    }
-
-    #narration {
-      width: 90%;
-      max-width: 600px;
+    /* 任意：読み込み状態の小さな表示 */
+    #status {
+      position: absolute; top: 8px; right: 12px;
+      font-size: 12px; color: #666; background: rgba(255,255,255,.8);
+      padding: 4px 8px; border-radius: 6px;
     }
   </style>
 </head>
 <body>
 
-<!-- モデルビューア -->
-<model-viewer
-  id="viewer"
-  src="./dino_move.glb"
-  ios-src="./dino_move4.usdz"
-  ar
-  ar-modes="scene-viewer webxr quick-look"
-  ar-placement="floor"
-  auto-rotate
-  camera-controls
-  alt="AsianBlackBear">
-</model-viewer>
+  <!-- 画面外で“同じモデル”をウォームアップ読み込み -->
+  <model-viewer
+    id="preloader"
+    src="./dino_move.glb"
+    ios-src="./dino_move4.usdz"
+    ar
+    ar-modes="scene-viewer webxr quick-look"
+    camera-controls
+    exposure="1">
+  </model-viewer>
 
-<!-- オーディオガイド -->
-<div id="audio-container">
-  <div class="audio-header">
-    <h2>解説ガイド</h2>
-    <span class="ar-link" onclick="document.getElementById('viewer').activateAR()">ARで表示</span>
+  <!-- ユーザーに見せる通常ビューア -->
+  <model-viewer
+    id="viewer"
+    src="./dino_move.glb"
+    ios-src="./dino_move4.usdz"
+    ar
+    ar-modes="scene-viewer webxr quick-look"
+    ar-placement="floor"
+    auto-rotate
+    camera-controls
+    alt="AsianBlackBear">
+    <div id="status">読み込み準備中…</div>
+  </model-viewer>
+
+  <!-- オーディオガイド -->
+  <div id="audio-container">
+    <div class="audio-header">
+      <h2>解説ガイド</h2>
+      <span class="ar-link" onclick="openAR()">ARで表示</span>
+    </div>
+    <audio id="narration" controls src="./BlackBear2.wav"></audio>
   </div>
-  <audio id="narration" controls src="./BlackBear2.wav"></audio>
-</div>
 
+  <script>
+    const viewer = document.getElementById('viewer');
+    const preloader = document.getElementById('preloader');
+    const statusEl = document.getElementById('status');
+
+    let glbReady = false;
+    let usdzReady = false;
+
+    // 追加の手動プリロード（ブラウザキャッシュに確実に載せる）
+    // ※ 同一オリジン推奨。CORS必要ならサーバ側設定を。
+    Promise.allSettled([
+      fetch('./dino_move.glb', { mode: 'cors', cache: 'reload' }),
+      fetch('./dino_move4.usdz', { mode: 'cors', cache: 'reload' })
+    ]).finally(() => {
+      // 何もせずとも以後の取得はキャッシュヒットしやすい
+    });
+
+    // preloader がモデルを読み終えたらフラグを立てる
+    preloader.addEventListener('load', () => {
+      glbReady = true;
+      updateStatus();
+    });
+
+    // iOS向けUSdzの温まり判定用に、visible側のloadも拾う
+    viewer.addEventListener('load', () => {
+      // このイベントはGLB/USdzいずれも来るが、ざっくりReady扱い
+      glbReady = true; usdzReady = true;
+      updateStatus();
+    });
+
+    // 読み込み進捗（目安表示）
+    preloader.addEventListener('progress', (e) => {
+      if (e.total > 0) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        statusEl.textContent = `先読み中… ${pct}%`;
+      } else {
+        statusEl.textContent = `先読み中…`;
+      }
+    });
+
+    function updateStatus() {
+      if (glbReady) {
+        statusEl.textContent = '準備OK（キャッシュ済み）';
+        // 少し遅らせて控えめにフェードアウト
+        setTimeout(() => {
+          statusEl.style.transition = 'opacity .3s ease';
+          statusEl.style.opacity = '0';
+          setTimeout(() => statusEl.style.display = 'none', 350);
+        }, 600);
+      }
+    }
+
+    // AR起動（キャッシュ済みなら体感が速くなる）
+    async function openAR() {
+      try {
+        await viewer.activateAR();
+      } catch (e) {
+        console.warn('AR起動に失敗:', e);
+        // フォールバック：iOSならQuick Look直リンクへ誘導も可
+        // location.href = './dino_move4.usdz';
+      }
+    }
+
+    // ページ読み込み直後に preloader のレイジーロードを確実に開始
+    // （DOM上にあるだけで読み始めるが、念のため小さく再設定）
+    window.addEventListener('DOMContentLoaded', () => {
+      // src再設定で確実にロードをトリガー
+      const s = preloader.getAttribute('src');
+      preloader.setAttribute('src', s);
+    });
+  </script>
 </body>
 </html>
