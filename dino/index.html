@@ -2,87 +2,80 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-  <!-- model-viewer 本体 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
-  <!-- モデルのネットワーク先読み（同一URLを使うこと） -->
+  <!-- 先読み（任意） -->
   <link rel="preload" href="./dino_move.glb" as="fetch" crossorigin>
   <link rel="preload" href="./dino_move4.usdz" as="fetch" crossorigin>
 
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-      background-color: #fff;
-    }
-    model-viewer {
-      display: block;
-      width: 100%;
-      height: calc(100vh - 120px); /* 音声ガイド領域を引いた高さ */
-      background: #f7f7f7;
-    }
+    html, body { margin:0; padding:0; background:#fff; font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif; }
+    model-viewer { display:block; width:100%; height:calc(100vh - 120px); background:#f7f7f7; }
+
     #audio-container {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      background-color: rgba(255, 255, 255, 0.96);
-      box-shadow: 0 -2px 8px rgba(0,0,0,.1);
-      z-index: 10; padding: 10px 0;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      position:fixed; left:0; bottom:0; width:100%;
+      background:rgba(255,255,255,.96); box-shadow:0 -2px 8px rgba(0,0,0,.1);
+      z-index:10; padding:10px 0; display:flex; flex-direction:column; align-items:center; gap:6px;
       -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     }
-    .audio-header { display: flex; justify-content: center; align-items: center; gap: 16px; }
-    .audio-header h2 { margin: 0; font-size: 14px; color: #333; }
-    .ar-link { font-size: 14px; color: #2c3e50; text-decoration: underline; cursor: pointer; }
-    .ar-link:hover { color: #1a252f; }
-    #narration { width: 90%; max-width: 600px; }
-    /* 画面外プレローダー（表示しない） */
-    #preloader {
-      position: absolute; left: -99999px; top: -99999px;
-      width: 1px; height: 1px; opacity: 0; pointer-events: none;
+    .audio-header { display:flex; align-items:center; gap:16px; }
+    .audio-header h2 { margin:0; font-size:14px; color:#333; }
+    .ar-link { font-size:14px; color:#2c3e50; text-decoration:underline; cursor:pointer; }
+    .ar-link:hover { color:#1a252f; }
+    #narration { width:90%; max-width:600px; }
+
+    /* 画面外先読み用 */
+    #preloader { position:absolute; left:-99999px; top:-99999px; width:1px; height:1px; opacity:0; pointer-events:none; }
+
+    /* 疑似カメラの全画面オーバーレイ */
+    #cam-overlay {
+      position:fixed; inset:0; background:#000; display:none; z-index:9999;
+      align-items:center; justify-content:center; flex-direction:column;
     }
-    /* 任意：読み込み状態の小さな表示 */
-    #status {
-      position: absolute; top: 8px; right: 12px;
-      font-size: 12px; color: #666; background: rgba(255,255,255,.8);
-      padding: 4px 8px; border-radius: 6px;
+    #cam-video { width:100%; height:100%; object-fit:cover; }
+    #cam-hint {
+      position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+      color:#fff; font-size:14px; background:rgba(0,0,0,.35); padding:8px 12px; border-radius:8px;
+    }
+    #cam-spinner {
+      position:absolute; top:20px; right:20px; color:#fff; font-size:12px;
+      background:rgba(0,0,0,.35); padding:6px 10px; border-radius:8px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 画面外で“同じモデル”をウォームアップ読み込み -->
-  <model-viewer
-    id="preloader"
+  <!-- 画面外で同じモデルを先読み（任意） -->
+  <model-viewer id="preloader"
     src="./dino_move.glb"
     ios-src="./dino_move4.usdz"
-    ar
-    ar-modes="scene-viewer webxr quick-look"
-    camera-controls
-    exposure="1">
+    ar ar-modes="scene-viewer webxr quick-look">
   </model-viewer>
 
-  <!-- ユーザーに見せる通常ビューア -->
-  <model-viewer
-    id="viewer"
+  <!-- 表示用 -->
+  <model-viewer id="viewer"
     src="./dino_move.glb"
     ios-src="./dino_move4.usdz"
-    ar
-    ar-modes="scene-viewer webxr quick-look"
+    ar ar-modes="scene-viewer webxr quick-look"
     ar-placement="floor"
     auto-rotate
     camera-controls
     alt="AsianBlackBear">
-    <div id="status">読み込み準備中…</div>
   </model-viewer>
+
+  <!-- 疑似カメラ（即時フィードバック用） -->
+  <div id="cam-overlay">
+    <video id="cam-video" autoplay playsinline muted></video>
+    <div id="cam-hint">ARを準備中…このままカメラをかざしてお待ちください</div>
+    <div id="cam-spinner">AR起動中…</div>
+  </div>
 
   <!-- オーディオガイド -->
   <div id="audio-container">
     <div class="audio-header">
       <h2>解説ガイド</h2>
-      <span class="ar-link" onclick="openAR()">ARで表示</span>
+      <span class="ar-link" id="arBtn">ARで表示</span>
     </div>
     <audio id="narration" controls src="./BlackBear2.wav"></audio>
   </div>
@@ -90,72 +83,62 @@
   <script>
     const viewer = document.getElementById('viewer');
     const preloader = document.getElementById('preloader');
-    const statusEl = document.getElementById('status');
+    const arBtn = document.getElementById('arBtn');
 
-    let glbReady = false;
-    let usdzReady = false;
+    const camOverlay = document.getElementById('cam-overlay');
+    const camVideo = document.getElementById('cam-video');
 
-    // 追加の手動プリロード（ブラウザキャッシュに確実に載せる）
-    // ※ 同一オリジン推奨。CORS必要ならサーバ側設定を。
+    // 追加プリロード（任意）
     Promise.allSettled([
-      fetch('./dino_move.glb', { mode: 'cors', cache: 'reload' }),
-      fetch('./dino_move4.usdz', { mode: 'cors', cache: 'reload' })
-    ]).finally(() => {
-      // 何もせずとも以後の取得はキャッシュヒットしやすい
-    });
+      fetch('./dino_move.glb', {mode:'cors'}),
+      fetch('./dino_move4.usdz', {mode:'cors'})
+    ]);
 
-    // preloader がモデルを読み終えたらフラグを立てる
-    preloader.addEventListener('load', () => {
-      glbReady = true;
-      updateStatus();
-    });
+    let overlayStream = null;
 
-    // iOS向けUSdzの温まり判定用に、visible側のloadも拾う
-    viewer.addEventListener('load', () => {
-      // このイベントはGLB/USdzいずれも来るが、ざっくりReady扱い
-      glbReady = true; usdzReady = true;
-      updateStatus();
-    });
-
-    // 読み込み進捗（目安表示）
-    preloader.addEventListener('progress', (e) => {
-      if (e.total > 0) {
-        const pct = Math.round((e.loaded / e.total) * 100);
-        statusEl.textContent = `先読み中… ${pct}%`;
-      } else {
-        statusEl.textContent = `先読み中…`;
-      }
-    });
-
-    function updateStatus() {
-      if (glbReady) {
-        statusEl.textContent = '準備OK（キャッシュ済み）';
-        // 少し遅らせて控えめにフェードアウト
-        setTimeout(() => {
-          statusEl.style.transition = 'opacity .3s ease';
-          statusEl.style.opacity = '0';
-          setTimeout(() => statusEl.style.display = 'none', 350);
-        }, 600);
-      }
-    }
-
-    // AR起動（キャッシュ済みなら体感が速くなる）
-    async function openAR() {
+    async function showCameraOverlay() {
+      camOverlay.style.display = 'flex';
       try {
-        await viewer.activateAR();
+        overlayStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        camVideo.srcObject = overlayStream;
       } catch (e) {
-        console.warn('AR起動に失敗:', e);
-        // フォールバック：iOSならQuick Look直リンクへ誘導も可
-        // location.href = './dino_move4.usdz';
+        // カメラ権限が拒否されたら真っ黒背景のまま
+        console.warn('Camera overlay failed:', e);
       }
     }
 
-    // ページ読み込み直後に preloader のレイジーロードを確実に開始
-    // （DOM上にあるだけで読み始めるが、念のため小さく再設定）
+    function hideCameraOverlay() {
+      if (overlayStream) {
+        overlayStream.getTracks().forEach(t => t.stop());
+        overlayStream = null;
+      }
+      camVideo.srcObject = null;
+      camOverlay.style.display = 'none';
+    }
+
+    async function openAR() {
+      // 1) 即時にカメラ風オーバーレイを出す（体感ゼロ待ち）
+      await showCameraOverlay();
+
+      // 2) 裏で本物のARを起動
+      const t0 = performance.now();
+      try {
+        await viewer.activateAR(); // Scene Viewer / Quick Look / WebXR のいずれかへ
+      } catch (e) {
+        console.warn('activateAR failed:', e);
+      } finally {
+        // 3) どのみち本物ARに切り替わったらオーバーレイを閉じる
+        hideCameraOverlay();
+        const dt = Math.round(performance.now() - t0);
+        console.log(`AR起動（ボタン→遷移まで）: ${dt}ms`);
+      }
+    }
+
+    arBtn.addEventListener('click', openAR);
+
+    // ページ読込時にpreloaderのロードを確定させる（任意）
     window.addEventListener('DOMContentLoaded', () => {
-      // src再設定で確実にロードをトリガー
-      const s = preloader.getAttribute('src');
-      preloader.setAttribute('src', s);
+      preloader.setAttribute('src', preloader.getAttribute('src')); // 再設定でロード確実化
     });
   </script>
 </body>
