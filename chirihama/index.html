@@ -90,7 +90,14 @@
       <div class="actions"><span id="ar-close">閉じる</span></div>
     </div>
   </div>
-
+  
+  <!-- オーディオガイド -->
+  <div id="audio-container">
+    <div class="audio-header">
+      <span class="ar-link" onclick="openAR()">ARを表示する</span>
+    </div>
+    <audio id="narration" controls src="../noto,-the-future-of-country.mp3"></audio>
+  </div>
 
   <script>
     const viewer = document.getElementById('viewer');
